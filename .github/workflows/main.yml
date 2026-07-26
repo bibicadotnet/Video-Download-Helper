@@ -3,7 +3,7 @@ name: Patch Video Download Helper
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 17 * * *' # Chạy vào lúc 00:00 giờ Việt Nam (17:00 UTC) mỗi ngày
+    - cron: '0 17 * * *'
 
 permissions:
   contents: write
@@ -24,7 +24,23 @@ jobs:
           
           rm -rf vdh_ext/_metadata
 
+      - name: Check if Release exists
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXT_VERSION=$(jq -r '.version' vdh_ext/manifest.json)
+          
+          if gh release view "v$EXT_VERSION" -R ${{ github.repository }} &>/dev/null; then
+            echo "Release v$EXT_VERSION đã tồn tại. Bỏ qua các bước tiếp theo."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Bản mới v$EXT_VERSION. Tiếp tục patch và release."
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Patch service/main.js and inject key
+        if: steps.check.outputs.skip != 'true'
         run: |
           sed -i 's/qn=!1/qn=!0/g' vdh_ext/service/main.js
           
@@ -39,6 +55,7 @@ jobs:
           mv vdh_ext/manifest_tmp.json vdh_ext/manifest.json
 
       - name: Repack to ZIP
+        if: steps.check.outputs.skip != 'true'
         run: |
           EXT_VERSION=$(jq -r '.version' vdh_ext/manifest.json)
           echo "VERSION=$EXT_VERSION" >> $GITHUB_ENV
@@ -49,6 +66,7 @@ jobs:
           cp ../video-download-helper_${EXT_VERSION}.zip ../video-download-helper_latest.zip
 
       - name: Upload Patched ZIP Artifact
+        if: steps.check.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: VDH-Patched-ZIP
@@ -56,6 +74,7 @@ jobs:
           retention-days: 7
 
       - name: Create Release
+        if: steps.check.outputs.skip != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VERSION }}
