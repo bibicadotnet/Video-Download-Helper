@@ -2,6 +2,8 @@ name: Patch Video Download Helper
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 17 * * *' # Chạy vào lúc 00:00 giờ Việt Nam (17:00 UTC) mỗi ngày
 
 permissions:
   contents: write
@@ -38,15 +40,12 @@ jobs:
 
       - name: Repack to ZIP
         run: |
-          # Đọc version từ manifest.json bằng jq và đưa vào biến môi trường của GitHub Actions
           EXT_VERSION=$(jq -r '.version' vdh_ext/manifest.json)
           echo "VERSION=$EXT_VERSION" >> $GITHUB_ENV
 
           cd vdh_ext
-          # Nén với tên file chứa version
           zip -r ../video-download-helper_${EXT_VERSION}.zip *
           
-          # Copy ra thêm một file tên cố định để làm link tải latest
           cp ../video-download-helper_${EXT_VERSION}.zip ../video-download-helper_latest.zip
 
       - name: Upload Patched ZIP Artifact
