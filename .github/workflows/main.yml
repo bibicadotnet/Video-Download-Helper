@@ -19,7 +19,7 @@ jobs:
           
           rm -rf vdh_ext/_metadata
 
-      - name: Patch service/main.js
+      - name: Patch service/main.js and inject key
         run: |
           sed -i 's/qn=!1/qn=!0/g' vdh_ext/service/main.js
           
@@ -30,15 +30,18 @@ jobs:
             exit 1
           fi
 
-      - name: Repack to CRX
-        run: |
-          google-chrome-stable --pack-extension=$(pwd)/vdh_ext
-          
-          mv vdh_ext.crx vdh_patched.crx
+          jq '.key = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAphdbW9Bk/84LQ9NEfbv5yO/mvJmDidcumtRCs+RZmMHU/6XIzFtEpoCrrNq2alPLkLawQPFiL/Efc67Hf8Kzi+U1pEr4re+dOT47v51Wf58VEz17KK4DPD2D/sctxjVZpMzusbntbSfPy61gMVEQpQw4Ta/5+/8xTFPfWJHd+H987qRAAMrMW/jz3V/92/ZHbnBxEI/aYkB6g1m0rn43OERKlcvVn3v42qKiEOOnHsrlfqvuKm5cMIwcb0kp7r1dryoMX3T2PtsFO8VtItudjG/67rhDk0Hm0+gZC3CbkknHQwmGcQCVrzHVpBbUh1n8au7KDCKoJFSBNKGiLmFcTQIDAQAB"' vdh_ext/manifest.json > vdh_ext/manifest_tmp.json
+          mv vdh_ext/manifest_tmp.json vdh_ext/manifest.json
 
-      - name: Upload Patched CRX Artifact
+      - name: Repack to ZIP
+        run: |
+
+          cd vdh_ext
+          zip -r ../vdh_patched.zip *
+
+      - name: Upload Patched ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: VDH-Patched-CRX
-          path: vdh_patched.crx
+          name: VDH-Patched-ZIP
+          path: vdh_patched.zip
           retention-days: 7
