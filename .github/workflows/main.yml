@@ -1,0 +1,44 @@
+name: Patch Video Download Helper
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Extension CRX
+        run: |
+          curl -L "https://edge.microsoft.com/extensionwebstorebase/v1/crx?response=redirect&prod=edgecrx&os=win&arch=x64&osArch=x64&nacl_arch=x86-64&prodchannel=unknown&prodversion=120.0.0.0&acceptformat=crx3&x=id%3Djmkaglaafmhbcpleggkmaliipiilhldn%26installsource%3Dondemand%26uc" -o vdh_original.crx
+
+      - name: Extract CRX
+        run: |
+          mkdir vdh_ext
+          7z x vdh_original.crx -ovdh_ext
+          
+          rm -rf vdh_ext/_metadata
+
+      - name: Patch service/main.js
+        run: |
+          sed -i 's/qn=!1/qn=!0/g' vdh_ext/service/main.js
+          
+          if grep -q "qn=!0" vdh_ext/service/main.js; then
+            echo "Patch successful!"
+          else
+            echo "Patch failed! String not found."
+            exit 1
+          fi
+
+      - name: Repack to CRX
+        run: |
+          google-chrome-stable --pack-extension=$(pwd)/vdh_ext
+          
+          mv vdh_ext.crx vdh_patched.crx
+
+      - name: Upload Patched CRX Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VDH-Patched-CRX
+          path: vdh_patched.crx
+          retention-days: 7
